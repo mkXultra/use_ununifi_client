@@ -148,21 +148,79 @@ function createCdpTx(sdk, accountInfo){
     return txBuilder;
 }
 
+function createPricefeedTx(sdk, accountInfo){
+  const pubKey = accountInfo.pubKey
+  const privKey = accountInfo.privKey
+  // const marketID = "ubtc:jpy"
+  const mrketID = "ubtc:jpy:30"
+  const newPrice = "2.984208922290198629"
+  let expiryDate = new Date();
+  const expiry = "14400"
+  expiryDate = new Date(expiryDate.getTime() + Number.parseInt(expiry) * 1000);
+    const msgCreateCdp = new ununifi.pricefeed.MsgPostPrice({
+      from: accountInfo.address.toString(),
+      market_id: marketID,
+      price: newPrice,
+      expiry: new proto.google.protobuf.Timestamp({
+        seconds: Long.fromNumber(expiryDate.getTime() / 1000),
+      }),
+    });
+    console.log("🚀 ~ file: cosmos_client.js ~ line 113 ~ createCdpTx ~ msgCreateCdp", msgCreateCdp)
+
+    const txBody = new proto.cosmos.tx.v1beta1.TxBody({
+      messages: [cosmosclient.codec.instanceToProtoAny(msgCreateCdp)],
+    });
+    const authInfo = new proto.cosmos.tx.v1beta1.AuthInfo({
+      signer_infos: [
+        {
+          public_key: cosmosclient.codec.instanceToProtoAny(pubKey),
+          mode_info: {
+            single: {
+              mode: proto.cosmos.tx.signing.v1beta1.SignMode.SIGN_MODE_DIRECT,
+            },
+          },
+          sequence: accountInfo.account.sequence,
+        },
+      ],
+      fee: {
+        // amount: [fee],
+        gas_limit: Long.fromString('300000'),
+      },
+    });
+
+    console.log("🚀 ~ file: cosmos_client.js ~ line 144 ~ init ~ sdk", sdk.chainID)
+    // sign
+    const txBuilder = new cosmosclient.TxBuilder(sdk, txBody, authInfo);
+    const signDocBytes = txBuilder.signDocBytes(accountInfo.account.account_number);
+    txBuilder.addSignature(privKey.sign(signDocBytes));
+
+    return txBuilder;
+}
+
 async function init(mnt) {
   const sdk = await setupCosmosclient(mnt)
   console.log("🚀 ~ file: cosmos_client.js ~ line 144 ~ init ~ sdk", sdk.chainID)
   const accountInfo = await getaccountInfo(sdk, mnt)
   // const tx = createExTx(sdk, accountInfo)
-  const tx = createCdpTx(sdk, accountInfo)
+  // const tx = createCdpTx(sdk, accountInfo)
+  const tx = Tx(sdk, accountInfo)
 
   const res = await broadcast(sdk, tx)
   console.log("🚀 ~ file: cosmos_client.js ~ line 152 ~ init ~ res", res)
   console.log(
     JSON.stringify(JSON.parse(res.data.tx_response.raw_log),"", 2)
     );
+
+  console.log("🚀 ~ file: cosmos_client.js ~ line 152 ~ init ~ res", res.data.tx_response.logs)
+}
+function Tx(sdk, accountInfo){
+  // return createExTx(sdk, accountInfo)
+  return createCdpTx(sdk, accountInfo)
+  // return createPricefeedTx(sdk, accountInfo)
 }
 const mnt1 = "figure web rescue rice quantum sustain alert citizen woman cable wasp eyebrow monster teach hockey giant monitor hero oblige picnic ball never lamp distance"
 const mnt2 = "chimney diesel tone pipe mouse detect vibrant video first jewel vacuum winter grant almost trim crystal similar giraffe dizzy hybrid trigger muffin awake leader"
-init(mnt2)
-    // proto.cosmos.base.v1beta1.ICoin
-// init(mnt)
+
+const mnt = mnt2
+
+init(mnt)
