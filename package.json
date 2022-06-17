@@ -19,6 +19,6 @@
   "homepage": "https://github.com/mkXultra/use_ununifi_client#readme",
   "dependencies": {
     "@cosmos-client/core": "^0.45.9",
-    "ununifi-client": "^0.45.1"
+    "ununifi-client": "file:checkdif/vps/dist2"
   }
 }

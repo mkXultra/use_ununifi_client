@@ -4,6 +4,7 @@ const Long = require('long')
 const host = "http://localhost:1317"
 const chainId = 'ununifi-test-private-m1'
 
+// console.log("🚀 ~ file: index.js ~ line 33 ~ core_1.cosmosclient.config.codecMaps.inv", cosmosclient.config.codecMaps.inv)
 async function setupCosmosclient() {
   const sdk = new cosmosclient.CosmosSDK(host, chainId);
   const bech32Prefix = "ununifi"
@@ -151,13 +152,13 @@ function createCdpTx(sdk, accountInfo){
 function createPricefeedTx(sdk, accountInfo){
   const pubKey = accountInfo.pubKey
   const privKey = accountInfo.privKey
-  // const marketID = "ubtc:jpy"
-  const mrketID = "ubtc:jpy:30"
+  const marketID = "ubtc:jpy"
+  // const mrketID = "ubtc:jpy:30"
   const newPrice = "2.984208922290198629"
   let expiryDate = new Date();
   const expiry = "14400"
   expiryDate = new Date(expiryDate.getTime() + Number.parseInt(expiry) * 1000);
-    const msgCreateCdp = new ununifi.pricefeed.MsgPostPrice({
+    const msg = new ununifi.pricefeed.MsgPostPrice({
       from: accountInfo.address.toString(),
       market_id: marketID,
       price: newPrice,
@@ -165,10 +166,55 @@ function createPricefeedTx(sdk, accountInfo){
         seconds: Long.fromNumber(expiryDate.getTime() / 1000),
       }),
     });
-    console.log("🚀 ~ file: cosmos_client.js ~ line 113 ~ createCdpTx ~ msgCreateCdp", msgCreateCdp)
 
     const txBody = new proto.cosmos.tx.v1beta1.TxBody({
-      messages: [cosmosclient.codec.instanceToProtoAny(msgCreateCdp)],
+      messages: [cosmosclient.codec.instanceToProtoAny(msg)],
+    });
+    const authInfo = new proto.cosmos.tx.v1beta1.AuthInfo({
+      signer_infos: [
+        {
+          public_key: cosmosclient.codec.instanceToProtoAny(pubKey),
+          mode_info: {
+            single: {
+              mode: proto.cosmos.tx.signing.v1beta1.SignMode.SIGN_MODE_DIRECT,
+            },
+          },
+          sequence: accountInfo.account.sequence,
+        },
+      ],
+      fee: {
+        // amount: [fee],
+        gas_limit: Long.fromString('300000'),
+      },
+    });
+
+    console.log("🚀 ~ file: cosmos_client.js ~ line 144 ~ init ~ sdk", sdk.chainID)
+    // sign
+    const txBuilder = new cosmosclient.TxBuilder(sdk, txBody, authInfo);
+    const signDocBytes = txBuilder.signDocBytes(accountInfo.account.account_number);
+    txBuilder.addSignature(privKey.sign(signDocBytes));
+
+    return txBuilder;
+}
+
+function createListingTx(sdk, accountInfo){
+  const pubKey = accountInfo.pubKey
+  const privKey = accountInfo.privKey
+    const msg = new ununifi.nftmarket.MsgListNft({
+      sender: accountInfo.address.toString(),
+      nft_id:{
+            class_id: "a10",
+            nft_id: "a10",
+      },
+      listing_type: ununifi.nftmarket.ListingType.DIRECT_ASSET_BORROW,
+      bid_token: "uguu",
+      min_bid: "1",
+      bid_hook: Long.fromString('2'),
+    });
+    console.log("🚀 ~ file: cosmos_client.js ~ line 113 ~ createCdpTx ~ msgCreateCdp", msg)
+
+    const txBody = new proto.cosmos.tx.v1beta1.TxBody({
+      messages: [cosmosclient.codec.instanceToProtoAny(msg)],
     });
     const authInfo = new proto.cosmos.tx.v1beta1.AuthInfo({
       signer_infos: [
@@ -215,12 +261,13 @@ async function init(mnt) {
 }
 function Tx(sdk, accountInfo){
   // return createExTx(sdk, accountInfo)
-  return createCdpTx(sdk, accountInfo)
+  // return createCdpTx(sdk, accountInfo)
   // return createPricefeedTx(sdk, accountInfo)
+  return createListingTx(sdk, accountInfo)
 }
 const mnt1 = "figure web rescue rice quantum sustain alert citizen woman cable wasp eyebrow monster teach hockey giant monitor hero oblige picnic ball never lamp distance"
 const mnt2 = "chimney diesel tone pipe mouse detect vibrant video first jewel vacuum winter grant almost trim crystal similar giraffe dizzy hybrid trigger muffin awake leader"
 
-const mnt = mnt2
+const mnt = mnt1
 
 init(mnt)
